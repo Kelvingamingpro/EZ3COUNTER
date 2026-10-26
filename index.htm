@@ -1,0 +1,855 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="robots" content="noindex, nofollow, noarchive, nosnippet" />
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self' 'unsafe-inline' https://cdn.tailwindcss.com https://fonts.googleapis.com https://fonts.gstatic.com; style-src 'self' 'unsafe-inline' https://cdn.tailwindcss.com https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com;">
+  <title>MakerQuote Pro — 3D Printing Quote Calculator</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          colors: {
+            neon: {
+              cyan: '#00f0ff',
+              blue: '#00a8ff',
+              purple: '#a855f7'
+            }
+          },
+          boxShadow: {
+            'neon': '0 0 15px rgba(0, 240, 255, 0.3)',
+            'neon-strong': '0 0 25px rgba(0, 240, 255, 0.5)',
+            'glass': '0 8px 32px 0 rgba(0, 0, 0, 0.37)'
+          }
+        }
+      }
+    }
+  </script>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap');
+    
+    body {
+      font-family: 'Inter', system-ui, sans-serif;
+      background: #0a0e17;
+      background-image: 
+        radial-gradient(ellipse at 20% 20%, rgba(0, 168, 255, 0.08) 0%, transparent 50%),
+        radial-gradient(ellipse at 80% 80%, rgba(168, 85, 247, 0.06) 0%, transparent 50%),
+        radial-gradient(ellipse at 50% 50%, rgba(0, 240, 255, 0.03) 0%, transparent 70%);
+      min-height: 100vh;
+      -webkit-user-select: none;
+      -moz-user-select: none;
+      -ms-user-select: none;
+      user-select: none;
+    }
+
+    input, textarea, select {
+      -webkit-user-select: text;
+      -moz-user-select: text;
+      -ms-user-select: text;
+      user-select: text;
+    }
+    
+    .glass {
+      background: rgba(15, 23, 42, 0.65);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      border: 1px solid rgba(148, 163, 184, 0.12);
+    }
+    
+    .glass-strong {
+      background: rgba(15, 23, 42, 0.85);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      border: 1px solid rgba(0, 240, 255, 0.15);
+    }
+    
+    .input-glass {
+      background: rgba(30, 41, 59, 0.6);
+      border: 1px solid rgba(148, 163, 184, 0.2);
+      transition: all 0.2s ease;
+    }
+    
+    .input-glass:focus {
+      background: rgba(30, 41, 59, 0.9);
+      border-color: #00f0ff;
+      box-shadow: 0 0 0 3px rgba(0, 240, 255, 0.15);
+      outline: none;
+    }
+    
+    .btn-neon {
+      background: linear-gradient(135deg, #00a8ff, #00f0ff);
+      color: #0a0e17;
+      font-weight: 600;
+      transition: all 0.25s ease;
+    }
+    
+    .btn-neon:hover {
+      box-shadow: 0 0 25px rgba(0, 240, 255, 0.5);
+      transform: translateY(-1px);
+    }
+    
+    .btn-neon:active {
+      transform: translateY(0);
+    }
+    
+    .price-highlight {
+      background: linear-gradient(135deg, rgba(0, 240, 255, 0.15), rgba(0, 168, 255, 0.1));
+      border: 1px solid rgba(0, 240, 255, 0.3);
+      box-shadow: 0 0 30px rgba(0, 240, 255, 0.15);
+    }
+    
+    .slider-thumb::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      appearance: none;
+      width: 18px;
+      height: 18px;
+      border-radius: 50%;
+      background: #00f0ff;
+      cursor: pointer;
+      box-shadow: 0 0 10px rgba(0, 240, 255, 0.6);
+    }
+    
+    .slider-thumb::-moz-range-thumb {
+      width: 18px;
+      height: 18px;
+      border-radius: 50%;
+      background: #00f0ff;
+      cursor: pointer;
+      border: none;
+      box-shadow: 0 0 10px rgba(0, 240, 255, 0.6);
+    }
+    
+    .toast {
+      animation: slideIn 0.3s ease, fadeOut 0.3s ease 1.7s forwards;
+    }
+    
+    @keyframes slideIn {
+      from { transform: translateY(20px); opacity: 0; }
+      to { transform: translateY(0); opacity: 1; }
+    }
+    
+    @keyframes fadeOut {
+      to { opacity: 0; transform: translateY(-10px); }
+    }
+    
+    .mono {
+      font-family: 'JetBrains Mono', monospace;
+    }
+    
+    ::-webkit-scrollbar {
+      width: 6px;
+      height: 6px;
+    }
+    ::-webkit-scrollbar-track {
+      background: rgba(15, 23, 42, 0.5);
+    }
+    ::-webkit-scrollbar-thumb {
+      background: rgba(0, 240, 255, 0.3);
+      border-radius: 3px;
+    }
+    ::-webkit-scrollbar-thumb:hover {
+      background: rgba(0, 240, 255, 0.5);
+    }
+
+    /* Anti-copy visual layer */
+    .protected-content {
+      position: relative;
+    }
+  </style>
+</head>
+<body class="text-slate-200 antialiased protected-content">
+  <!-- Toast Notification -->
+  <div id="toast" class="fixed bottom-6 right-6 z-50 hidden">
+    <div class="glass-strong px-5 py-3 rounded-xl flex items-center gap-3 shadow-neon">
+      <svg class="w-5 h-5 text-neon-cyan" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+      </svg>
+      <span id="toast-msg" class="font-medium text-sm">Copied successfully!</span>
+    </div>
+  </div>
+
+  <div class="max-w-7xl mx-auto px-4 sm:px-6 py-6 sm:py-8">
+    <!-- Header -->
+    <header class="mb-8">
+      <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+        <div class="flex items-center gap-3">
+          <div class="w-11 h-11 rounded-xl bg-gradient-to-br from-cyan-400 to-blue-500 flex items-center justify-center shadow-neon">
+            <svg class="w-6 h-6 text-slate-900" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z"/>
+            </svg>
+          </div>
+          <div>
+            <h1 class="text-2xl sm:text-3xl font-bold tracking-tight bg-gradient-to-r from-cyan-300 via-neon-cyan to-blue-400 bg-clip-text text-transparent">
+              MakerQuote Pro
+            </h1>
+            <p class="text-slate-400 text-sm">3D Printing Quote Calculator & Offer Generator</p>
+          </div>
+        </div>
+        <div class="flex items-center gap-2 text-xs text-slate-500">
+          <span class="px-2.5 py-1 rounded-full bg-slate-800/80 border border-slate-700">v1.0 Protected</span>
+          <span class="hidden sm:inline">• Data stored locally</span>
+        </div>
+      </div>
+    </header>
+
+    <div class="grid grid-cols-1 xl:grid-cols-12 gap-6">
+      <!-- LEFT COLUMN: Settings + Materials -->
+      <div class="xl:col-span-4 space-y-6">
+        <!-- Studio Settings -->
+        <section class="glass rounded-2xl p-5 sm:p-6 shadow-glass">
+          <div class="flex items-center gap-2 mb-5">
+            <div class="w-8 h-8 rounded-lg bg-cyan-500/10 flex items-center justify-center">
+              <svg class="w-4 h-4 text-neon-cyan" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/>
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
+              </svg>
+            </div>
+            <h2 class="text-lg font-semibold text-white">Studio Settings</h2>
+          </div>
+
+          <div class="space-y-4">
+            <div>
+              <label class="block text-xs font-medium text-slate-400 mb-1.5">Electricity Rate (Rp / kWh)</label>
+              <input type="number" id="electricityRate" value="1444" min="0" step="1"
+                class="input-glass w-full rounded-xl px-4 py-2.5 text-sm mono focus:ring-0" />
+            </div>
+            <div>
+              <label class="block text-xs font-medium text-slate-400 mb-1.5">Average Printer Power (Watt)</label>
+              <input type="number" id="printerWatt" value="120" min="0" step="1"
+                class="input-glass w-full rounded-xl px-4 py-2.5 text-sm mono focus:ring-0" />
+            </div>
+            <div>
+              <label class="block text-xs font-medium text-slate-400 mb-1.5">Machine Depreciation (Rp / hour)</label>
+              <input type="number" id="machineWear" value="2500" min="0" step="100"
+                class="input-glass w-full rounded-xl px-4 py-2.5 text-sm mono focus:ring-0" />
+            </div>
+            <div>
+              <label class="block text-xs font-medium text-slate-400 mb-1.5">Labor Rate – Finishing (Rp / hour)</label>
+              <input type="number" id="laborRate" value="25000" min="0" step="1000"
+                class="input-glass w-full rounded-xl px-4 py-2.5 text-sm mono focus:ring-0" />
+            </div>
+          </div>
+        </section>
+
+        <!-- Materials Management -->
+        <section class="glass rounded-2xl p-5 sm:p-6 shadow-glass">
+          <div class="flex items-center justify-between mb-5">
+            <div class="flex items-center gap-2">
+              <div class="w-8 h-8 rounded-lg bg-purple-500/10 flex items-center justify-center">
+                <svg class="w-4 h-4 text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"/>
+                </svg>
+              </div>
+              <h2 class="text-lg font-semibold text-white">Material Database</h2>
+            </div>
+            <button id="btnAddMaterial" class="text-xs px-3 py-1.5 rounded-lg bg-cyan-500/10 text-neon-cyan border border-cyan-500/30 hover:bg-cyan-500/20 transition">
+              + Add
+            </button>
+          </div>
+
+          <!-- Add/Edit Form -->
+          <div id="materialForm" class="hidden mb-4 p-4 rounded-xl bg-slate-800/50 border border-slate-700/50 space-y-3">
+            <input type="hidden" id="editMaterialId" />
+            <div>
+              <label class="block text-xs text-slate-400 mb-1">Material Name</label>
+              <input type="text" id="matName" placeholder="e.g. PLA Premium"
+                class="input-glass w-full rounded-lg px-3 py-2 text-sm focus:ring-0" />
+            </div>
+            <div class="grid grid-cols-2 gap-3">
+              <div>
+                <label class="block text-xs text-slate-400 mb-1">Spool Price (Rp)</label>
+                <input type="number" id="matPrice" placeholder="180000" min="0"
+                  class="input-glass w-full rounded-lg px-3 py-2 text-sm mono focus:ring-0" />
+              </div>
+              <div>
+                <label class="block text-xs text-slate-400 mb-1">Spool Weight (g)</label>
+                <input type="number" id="matWeight" placeholder="1000" min="1"
+                  class="input-glass w-full rounded-lg px-3 py-2 text-sm mono focus:ring-0" />
+              </div>
+            </div>
+            <div class="flex gap-2">
+              <button id="btnSaveMaterial" class="btn-neon flex-1 py-2 rounded-lg text-sm">Save</button>
+              <button id="btnCancelMaterial" class="flex-1 py-2 rounded-lg text-sm bg-slate-700 hover:bg-slate-600 transition">Cancel</button>
+            </div>
+          </div>
+
+          <!-- Materials List -->
+          <div id="materialsList" class="space-y-2 max-h-72 overflow-y-auto pr-1">
+            <!-- filled by JS -->
+          </div>
+        </section>
+      </div>
+
+      <!-- RIGHT COLUMN: Calculator + Results + Quote -->
+      <div class="xl:col-span-8 space-y-6">
+        <!-- Calculator -->
+        <section class="glass rounded-2xl p-5 sm:p-6 shadow-glass">
+          <div class="flex items-center gap-2 mb-5">
+            <div class="w-8 h-8 rounded-lg bg-emerald-500/10 flex items-center justify-center">
+              <svg class="w-4 h-4 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 14h.01M12 14h.01M15 11h.01M12 11h.01M9 11h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z"/>
+              </svg>
+            </div>
+            <h2 class="text-lg font-semibold text-white">Order Calculator</h2>
+          </div>
+
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
+            <div>
+              <label class="block text-xs font-medium text-slate-400 mb-1.5">Material</label>
+              <select id="selectedMaterial" class="input-glass w-full rounded-xl px-4 py-2.5 text-sm focus:ring-0 appearance-none cursor-pointer">
+              </select>
+            </div>
+            <div>
+              <label class="block text-xs font-medium text-slate-400 mb-1.5">Material Weight (grams)</label>
+              <input type="number" id="weightUsed" value="50" min="0" step="0.1"
+                class="input-glass w-full rounded-xl px-4 py-2.5 text-sm mono focus:ring-0" />
+            </div>
+
+            <div class="md:col-span-2">
+              <label class="block text-xs font-medium text-slate-400 mb-1.5">Print Time (from Slicer)</label>
+              <div class="grid grid-cols-2 gap-3">
+                <div class="relative">
+                  <input type="number" id="printHours" value="3" min="0" step="1"
+                    class="input-glass w-full rounded-xl px-4 py-2.5 text-sm mono focus:ring-0 pr-14" />
+                  <span class="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-slate-500">hours</span>
+                </div>
+                <div class="relative">
+                  <input type="number" id="printMinutes" value="30" min="0" max="59" step="1"
+                    class="input-glass w-full rounded-xl px-4 py-2.5 text-sm mono focus:ring-0 pr-16" />
+                  <span class="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-slate-500">minutes</span>
+                </div>
+              </div>
+            </div>
+
+            <div class="md:col-span-2">
+              <div class="flex items-center justify-between mb-1.5">
+                <label class="text-xs font-medium text-slate-400">Failure Rate / Risk Buffer</label>
+                <span id="failureValue" class="text-sm font-semibold text-neon-cyan mono">5%</span>
+              </div>
+              <input type="range" id="failureRate" min="0" max="30" value="5" step="1"
+                class="w-full h-2 rounded-full appearance-none bg-slate-700 slider-thumb cursor-pointer" />
+              <div class="flex justify-between text-[10px] text-slate-500 mt-1">
+                <span>0%</span><span>15%</span><span>30%</span>
+              </div>
+            </div>
+
+            <div>
+              <label class="block text-xs font-medium text-slate-400 mb-1.5">Finishing Time (hours)</label>
+              <input type="number" id="finishingHours" value="0.5" min="0" step="0.25"
+                class="input-glass w-full rounded-xl px-4 py-2.5 text-sm mono focus:ring-0" />
+            </div>
+
+            <div>
+              <label class="block text-xs font-medium text-slate-400 mb-1.5">Profit Margin (%)</label>
+              <input type="number" id="profitMargin" value="40" min="0" max="500" step="5"
+                class="input-glass w-full rounded-xl px-4 py-2.5 text-sm mono focus:ring-0" />
+            </div>
+
+            <div class="md:col-span-2">
+              <label class="block text-xs font-medium text-slate-400 mb-1.5">Discount / Price Adjustment</label>
+              <div class="flex gap-3">
+                <select id="discountType" class="input-glass rounded-xl px-3 py-2.5 text-sm focus:ring-0 w-28">
+                  <option value="percent">%</option>
+                  <option value="fixed">Rp</option>
+                </select>
+                <input type="number" id="discountValue" value="0" min="0" step="1"
+                  class="input-glass flex-1 rounded-xl px-4 py-2.5 text-sm mono focus:ring-0" />
+              </div>
+            </div>
+          </div>
+
+          <!-- Dynamic Add-ons -->
+          <div class="mt-6 pt-5 border-t border-slate-700/50">
+            <div class="flex items-center justify-between mb-3">
+              <h3 class="text-sm font-medium text-slate-300">Add-ons / Extra Costs</h3>
+              <button id="btnAddAddon" class="text-xs px-3 py-1.5 rounded-lg bg-slate-700/80 hover:bg-slate-600 transition border border-slate-600">
+                + Add Extra Cost
+              </button>
+            </div>
+            <div id="addonsContainer" class="space-y-2">
+            </div>
+          </div>
+        </section>
+
+        <!-- Results Breakdown -->
+        <section class="glass rounded-2xl p-5 sm:p-6 shadow-glass">
+          <div class="flex items-center gap-2 mb-5">
+            <div class="w-8 h-8 rounded-lg bg-amber-500/10 flex items-center justify-center">
+              <svg class="w-4 h-4 text-amber-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/>
+              </svg>
+            </div>
+            <h2 class="text-lg font-semibold text-white">Cost Breakdown & Selling Price</h2>
+          </div>
+
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-5">
+            <div class="space-y-2.5 text-sm">
+              <div class="flex justify-between">
+                <span class="text-slate-400">Material Cost</span>
+                <span id="costMaterial" class="mono text-slate-200">Rp 0</span>
+              </div>
+              <div class="flex justify-between">
+                <span class="text-slate-400">Electricity Cost</span>
+                <span id="costElectricity" class="mono text-slate-200">Rp 0</span>
+              </div>
+              <div class="flex justify-between">
+                <span class="text-slate-400">Machine Depreciation</span>
+                <span id="costWear" class="mono text-slate-200">Rp 0</span>
+              </div>
+              <div class="flex justify-between">
+                <span class="text-slate-400">Labor Cost</span>
+                <span id="costLabor" class="mono text-slate-200">Rp 0</span>
+              </div>
+              <div class="flex justify-between">
+                <span class="text-slate-400">Add-ons</span>
+                <span id="costAddons" class="mono text-slate-200">Rp 0</span>
+              </div>
+              <div class="flex justify-between pt-2 border-t border-slate-700/60">
+                <span class="text-slate-300 font-medium">Total Cost (COGS)</span>
+                <span id="costHPP" class="mono font-semibold text-amber-300">Rp 0</span>
+              </div>
+            </div>
+
+            <div class="price-highlight rounded-2xl p-5 flex flex-col justify-center items-center text-center">
+              <p class="text-xs uppercase tracking-wider text-cyan-400/80 mb-1">Recommended Selling Price</p>
+              <p id="sellingPrice" class="text-3xl sm:text-4xl font-bold mono text-white tracking-tight">Rp 0</p>
+              <p id="priceNote" class="text-xs text-slate-400 mt-2">after margin & discount</p>
+            </div>
+          </div>
+
+          <div class="text-xs text-slate-500 flex flex-wrap gap-x-4 gap-y-1">
+            <span>Total print time: <span id="totalPrintTime" class="text-slate-400 mono">0 hours</span></span>
+            <span>•</span>
+            <span>Failure buffer: <span id="failureBuffer" class="text-slate-400 mono">0%</span></span>
+          </div>
+        </section>
+
+        <!-- WhatsApp Quote Generator -->
+        <section class="glass rounded-2xl p-5 sm:p-6 shadow-glass">
+          <div class="flex items-center gap-2 mb-5">
+            <div class="w-8 h-8 rounded-lg bg-green-500/10 flex items-center justify-center">
+              <svg class="w-4 h-4 text-green-400" fill="currentColor" viewBox="0 0 24 24">
+                <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.435 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/>
+              </svg>
+            </div>
+            <h2 class="text-lg font-semibold text-white">Quote Message Generator</h2>
+          </div>
+
+          <div class="mb-4">
+            <label class="block text-xs font-medium text-slate-400 mb-1.5">Additional Notes (optional)</label>
+            <textarea id="extraNotes" rows="2" placeholder="Example: Estimated completion 2-3 working days. Shipping not included. Payment via transfer or COD."
+              class="input-glass w-full rounded-xl px-4 py-3 text-sm focus:ring-0 resize-none"></textarea>
+          </div>
+
+          <div class="mb-4">
+            <label class="block text-xs font-medium text-slate-400 mb-1.5">Message Preview</label>
+            <div id="quotePreview" class="bg-slate-900/70 border border-slate-700/60 rounded-xl p-4 text-sm leading-relaxed whitespace-pre-wrap mono text-slate-300 max-h-64 overflow-y-auto">
+            </div>
+          </div>
+
+          <button id="btnCopyQuote" class="btn-neon w-full py-3.5 rounded-xl text-sm font-semibold flex items-center justify-center gap-2">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"/>
+            </svg>
+            Copy Message for WhatsApp
+          </button>
+        </section>
+      </div>
+    </div>
+
+    <footer class="mt-10 text-center text-xs text-slate-600">
+      MakerQuote Pro • Protected Client Application • For maker studios & custom 3D printing
+    </footer>
+  </div>
+
+  <script>
+    // ==================== HIGH-LEVEL CLIENT PROTECTION ====================
+    (function() {
+      'use strict';
+
+      // Disable right-click context menu
+      document.addEventListener('contextmenu', function(e) {
+        e.preventDefault();
+        return false;
+      });
+
+      // Disable common keyboard shortcuts
+      document.addEventListener('keydown', function(e) {
+        // F12, Ctrl+Shift+I, Ctrl+Shift+J, Ctrl+Shift+C, Ctrl+U, Ctrl+S
+        if (
+          e.key === 'F12' ||
+          (e.ctrlKey && e.shiftKey && (e.key === 'I' || e.key === 'i' || e.key === 'J' || e.key === 'j' || e.key === 'C' || e.key === 'c')) ||
+          (e.ctrlKey && (e.key === 'u' || e.key === 'U' || e.key === 's' || e.key === 'S')) ||
+          (e.metaKey && e.altKey && (e.key === 'i' || e.key === 'I')) // Mac
+        ) {
+          e.preventDefault();
+          e.stopPropagation();
+          return false;
+        }
+      });
+
+      // Disable drag
+      document.addEventListener('dragstart', function(e) {
+        e.preventDefault();
+        return false;
+      });
+
+      // Basic DevTools detection (imperfect but raises difficulty)
+      let devtoolsOpen = false;
+      const threshold = 160;
+      setInterval(function() {
+        const widthThreshold = window.outerWidth - window.innerWidth > threshold;
+        const heightThreshold = window.outerHeight - window.innerHeight > threshold;
+        if (widthThreshold || heightThreshold) {
+          if (!devtoolsOpen) {
+            devtoolsOpen = true;
+            document.body.innerHTML = '<div style="display:flex;align-items:center;justify-content:center;height:100vh;background:#0a0e17;color:#00f0ff;font-family:monospace;text-align:center;padding:20px;"><div><h1 style="font-size:24px;margin-bottom:12px;">Access Restricted</h1><p style="color:#94a3b8;">Developer tools detection triggered.<br>This application is protected.</p></div></div>';
+          }
+        }
+      }, 800);
+
+      // Clear console periodically (mild deterrent)
+      setInterval(function() {
+        try {
+          console.clear();
+          console.log('%cMakerQuote Pro — Protected Application', 'color:#00f0ff;font-size:14px;font-weight:bold;');
+        } catch(e) {}
+      }, 3000);
+
+      // Prevent easy source viewing via view-source (limited effect)
+      if (window.location.protocol === 'view-source:') {
+        window.location.href = 'about:blank';
+      }
+    })();
+
+    // ==================== APPLICATION STATE ====================
+    const DEFAULT_MATERIALS = [
+      { id: 'm1', name: 'PLA Standard', price: 165000, weight: 1000 },
+      { id: 'm2', name: 'PETG', price: 195000, weight: 1000 },
+      { id: 'm3', name: 'TPU Flexible', price: 245000, weight: 1000 },
+      { id: 'm4', name: 'Resin Tough', price: 280000, weight: 1000 },
+      { id: 'm5', name: 'Carbon Fiber PLA', price: 320000, weight: 1000 }
+    ];
+
+    let materials = [];
+    let addons = [];
+    let editingMaterialId = null;
+
+    // ==================== UTILITIES ====================
+    function formatRupiah(num) {
+      return 'Rp ' + Math.round(num).toLocaleString('id-ID');
+    }
+
+    function generateId() {
+      return 'id_' + Date.now() + '_' + Math.random().toString(36).slice(2, 7);
+    }
+
+    function showToast(msg) {
+      const toast = document.getElementById('toast');
+      document.getElementById('toast-msg').textContent = msg;
+      toast.classList.remove('hidden');
+      toast.querySelector('div').classList.add('toast');
+      setTimeout(() => {
+        toast.classList.add('hidden');
+        toast.querySelector('div').classList.remove('toast');
+      }, 2000);
+    }
+
+    // ==================== LOCAL STORAGE ====================
+    function saveSettings() {
+      const data = {
+        electricityRate: +document.getElementById('electricityRate').value,
+        printerWatt: +document.getElementById('printerWatt').value,
+        machineWear: +document.getElementById('machineWear').value,
+        laborRate: +document.getElementById('laborRate').value,
+        materials: materials
+      };
+      localStorage.setItem('makerquote_pro_v1', JSON.stringify(data));
+    }
+
+    function loadSettings() {
+      try {
+        const raw = localStorage.getItem('makerquote_pro_v1');
+        if (raw) {
+          const data = JSON.parse(raw);
+          document.getElementById('electricityRate').value = data.electricityRate ?? 1444;
+          document.getElementById('printerWatt').value = data.printerWatt ?? 120;
+          document.getElementById('machineWear').value = data.machineWear ?? 2500;
+          document.getElementById('laborRate').value = data.laborRate ?? 25000;
+          materials = data.materials?.length ? data.materials : [...DEFAULT_MATERIALS];
+        } else {
+          materials = [...DEFAULT_MATERIALS];
+        }
+      } catch (e) {
+        materials = [...DEFAULT_MATERIALS];
+      }
+    }
+
+    // ==================== MATERIALS UI ====================
+    function renderMaterials() {
+      const list = document.getElementById('materialsList');
+      const select = document.getElementById('selectedMaterial');
+      const currentVal = select.value;
+
+      list.innerHTML = materials.map(m => `
+        <div class="flex items-center justify-between p-3 rounded-xl bg-slate-800/40 border border-slate-700/40 hover:border-slate-600/60 transition group">
+          <div class="min-w-0">
+            <p class="text-sm font-medium text-slate-200 truncate">${m.name}</p>
+            <p class="text-xs text-slate-500 mono">${formatRupiah(m.price)} / ${m.weight}g</p>
+          </div>
+          <div class="flex gap-1 opacity-70 group-hover:opacity-100 transition">
+            <button onclick="editMaterial('${m.id}')" class="p-1.5 rounded-lg hover:bg-slate-700 text-slate-400 hover:text-cyan-400 transition" title="Edit">
+              <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg>
+            </button>
+            <button onclick="deleteMaterial('${m.id}')" class="p-1.5 rounded-lg hover:bg-red-500/20 text-slate-400 hover:text-red-400 transition" title="Delete">
+              <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
+            </button>
+          </div>
+        </div>
+      `).join('');
+
+      select.innerHTML = materials.map(m => 
+        `<option value="${m.id}">${m.name} — ${formatRupiah(m.price)}/${m.weight}g</option>`
+      ).join('');
+
+      if (currentVal && materials.find(m => m.id === currentVal)) {
+        select.value = currentVal;
+      }
+    }
+
+    function openMaterialForm(editId = null) {
+      const form = document.getElementById('materialForm');
+      form.classList.remove('hidden');
+      editingMaterialId = editId;
+
+      if (editId) {
+        const m = materials.find(x => x.id === editId);
+        document.getElementById('matName').value = m.name;
+        document.getElementById('matPrice').value = m.price;
+        document.getElementById('matWeight').value = m.weight;
+      } else {
+        document.getElementById('matName').value = '';
+        document.getElementById('matPrice').value = '';
+        document.getElementById('matWeight').value = '1000';
+      }
+    }
+
+    function closeMaterialForm() {
+      document.getElementById('materialForm').classList.add('hidden');
+      editingMaterialId = null;
+    }
+
+    window.editMaterial = function(id) {
+      openMaterialForm(id);
+    };
+
+    window.deleteMaterial = function(id) {
+      if (materials.length <= 1) {
+        showToast('At least one material is required');
+        return;
+      }
+      materials = materials.filter(m => m.id !== id);
+      saveSettings();
+      renderMaterials();
+      calculate();
+    };
+
+    // ==================== ADD-ONS ====================
+    function renderAddons() {
+      const container = document.getElementById('addonsContainer');
+      if (addons.length === 0) {
+        container.innerHTML = `<p class="text-xs text-slate-500 italic py-2">No add-ons yet. Click the button above to add extra costs.</p>`;
+        return;
+      }
+      container.innerHTML = addons.map((a, i) => `
+        <div class="flex gap-2 items-center">
+          <input type="text" value="${a.name}" placeholder="Extra cost name"
+            onchange="updateAddon(${i}, 'name', this.value)"
+            class="input-glass flex-1 rounded-lg px-3 py-2 text-sm focus:ring-0" />
+          <input type="number" value="${a.price}" min="0" placeholder="Price"
+            onchange="updateAddon(${i}, 'price', this.value)"
+            class="input-glass w-32 rounded-lg px-3 py-2 text-sm mono focus:ring-0" />
+          <button onclick="removeAddon(${i})" class="p-2 rounded-lg hover:bg-red-500/20 text-slate-400 hover:text-red-400 transition">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+          </button>
+        </div>
+      `).join('');
+    }
+
+    window.updateAddon = function(index, field, value) {
+      if (field === 'price') addons[index].price = +value || 0;
+      else addons[index].name = value;
+      calculate();
+    };
+
+    window.removeAddon = function(index) {
+      addons.splice(index, 1);
+      renderAddons();
+      calculate();
+    };
+
+    // ==================== CALCULATION ENGINE ====================
+    function calculate() {
+      const matId = document.getElementById('selectedMaterial').value;
+      const material = materials.find(m => m.id === matId) || materials[0];
+      const weightUsed = +document.getElementById('weightUsed').value || 0;
+      const printHours = +document.getElementById('printHours').value || 0;
+      const printMinutes = +document.getElementById('printMinutes').value || 0;
+      const failureRate = +document.getElementById('failureRate').value || 0;
+      const finishingHours = +document.getElementById('finishingHours').value || 0;
+      const profitMargin = +document.getElementById('profitMargin').value || 0;
+      const discountType = document.getElementById('discountType').value;
+      const discountValue = +document.getElementById('discountValue').value || 0;
+
+      const electricityRate = +document.getElementById('electricityRate').value || 0;
+      const printerWatt = +document.getElementById('printerWatt').value || 0;
+      const machineWear = +document.getElementById('machineWear').value || 0;
+      const laborRate = +document.getElementById('laborRate').value || 0;
+
+      const totalHours = printHours + (printMinutes / 60);
+
+      const materialCostRaw = material ? (weightUsed / material.weight) * material.price : 0;
+      const electricityCostRaw = (printerWatt / 1000) * totalHours * electricityRate;
+      const wearCostRaw = machineWear * totalHours;
+
+      const failureMultiplier = 1 + (failureRate / 100);
+      const materialCost = materialCostRaw * failureMultiplier;
+      const electricityCost = electricityCostRaw * failureMultiplier;
+      const wearCost = wearCostRaw * failureMultiplier;
+
+      const laborCost = finishingHours * laborRate;
+      const addonsCost = addons.reduce((sum, a) => sum + (a.price || 0), 0);
+
+      const hpp = materialCost + electricityCost + wearCost + laborCost + addonsCost;
+
+      let selling = hpp * (1 + profitMargin / 100);
+
+      if (discountType === 'percent') {
+        selling = selling * (1 - discountValue / 100);
+      } else {
+        selling = Math.max(0, selling - discountValue);
+      }
+
+      document.getElementById('costMaterial').textContent = formatRupiah(materialCost);
+      document.getElementById('costElectricity').textContent = formatRupiah(electricityCost);
+      document.getElementById('costWear').textContent = formatRupiah(wearCost);
+      document.getElementById('costLabor').textContent = formatRupiah(laborCost);
+      document.getElementById('costAddons').textContent = formatRupiah(addonsCost);
+      document.getElementById('costHPP').textContent = formatRupiah(hpp);
+      document.getElementById('sellingPrice').textContent = formatRupiah(selling);
+      document.getElementById('totalPrintTime').textContent = totalHours.toFixed(2) + ' hours';
+      document.getElementById('failureBuffer').textContent = failureRate + '%';
+      document.getElementById('failureValue').textContent = failureRate + '%';
+
+      generateQuote(material, weightUsed, totalHours, selling);
+    }
+
+    function generateQuote(material, weight, hours, selling) {
+      const notes = document.getElementById('extraNotes').value.trim();
+      const matName = material ? material.name : '-';
+      const hoursText = hours >= 1 
+        ? `${Math.floor(hours)}h ${Math.round((hours % 1) * 60)}m`
+        : `${Math.round(hours * 60)} minutes`;
+
+      let text = `*3D PRINTING QUOTE*\n`;
+      text += `━━━━━━━━━━━━━━━━━━━━\n\n`;
+      text += `📦 *Material:* ${matName}\n`;
+      text += `⚖️ *Weight:* ${weight} grams\n`;
+      text += `⏱️ *Estimated Print Time:* ±${hoursText}\n\n`;
+      text += `💰 *Total Price:* *${formatRupiah(selling)}*\n\n`;
+
+      if (notes) {
+        text += `📝 *Notes:*\n${notes}\n\n`;
+      }
+
+      text += `━━━━━━━━━━━━━━━━━━━━\n`;
+      text += `_Generated with MakerQuote Pro_\n`;
+      text += `Thank you!`;
+
+      document.getElementById('quotePreview').textContent = text;
+    }
+
+    // ==================== EVENT LISTENERS ====================
+    document.getElementById('btnAddMaterial').addEventListener('click', () => openMaterialForm());
+    document.getElementById('btnCancelMaterial').addEventListener('click', closeMaterialForm);
+
+    document.getElementById('btnSaveMaterial').addEventListener('click', () => {
+      const name = document.getElementById('matName').value.trim();
+      const price = +document.getElementById('matPrice').value;
+      const weight = +document.getElementById('matWeight').value;
+
+      if (!name || !price || !weight) {
+        showToast('Please fill all material fields');
+        return;
+      }
+
+      if (editingMaterialId) {
+        const idx = materials.findIndex(m => m.id === editingMaterialId);
+        if (idx >= 0) {
+          materials[idx] = { ...materials[idx], name, price, weight };
+        }
+      } else {
+        materials.push({ id: generateId(), name, price, weight });
+      }
+
+      saveSettings();
+      renderMaterials();
+      closeMaterialForm();
+      calculate();
+      showToast('Material saved');
+    });
+
+    document.getElementById('btnAddAddon').addEventListener('click', () => {
+      addons.push({ name: '', price: 0 });
+      renderAddons();
+    });
+
+    document.getElementById('btnCopyQuote').addEventListener('click', async () => {
+      const text = document.getElementById('quotePreview').textContent;
+      try {
+        await navigator.clipboard.writeText(text);
+        showToast('Message copied! Ready to paste into WhatsApp');
+      } catch (e) {
+        const ta = document.createElement('textarea');
+        ta.value = text;
+        document.body.appendChild(ta);
+        ta.select();
+        document.execCommand('copy');
+        document.body.removeChild(ta);
+        showToast('Message copied!');
+      }
+    });
+
+    const calcInputs = [
+      'electricityRate', 'printerWatt', 'machineWear', 'laborRate',
+      'selectedMaterial', 'weightUsed', 'printHours', 'printMinutes',
+      'failureRate', 'finishingHours', 'profitMargin', 'discountType', 'discountValue', 'extraNotes'
+    ];
+
+    calcInputs.forEach(id => {
+      const el = document.getElementById(id);
+      if (el) {
+        el.addEventListener('input', () => {
+          if (id === 'failureRate') {
+            document.getElementById('failureValue').textContent = el.value + '%';
+          }
+          if (['electricityRate', 'printerWatt', 'machineWear', 'laborRate'].includes(id)) {
+            saveSettings();
+          }
+          calculate();
+        });
+        el.addEventListener('change', calculate);
+      }
+    });
+
+    // ==================== INITIALIZATION ====================
+    loadSettings();
+    renderMaterials();
+    renderAddons();
+    calculate();
+  </script>
+</body>
+</html>
